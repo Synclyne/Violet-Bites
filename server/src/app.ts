@@ -2,7 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import type { DB } from "./db";
-import { signToken, publicUser } from "./auth";
+import { requireAuth, publicUser, signToken, type AuthedRequest } from "./auth";
 
 export function createApp(db: DB) {
   const app = express();
@@ -40,6 +40,47 @@ export function createApp(db: DB) {
       return res.status(401).json({ error: "Wrong email or password" });
     }
     res.json({ token: signToken(user.id), user: publicUser(user) });
+  });
+
+  const authed = requireAuth(db);
+  const uid = (req: express.Request) => (req as AuthedRequest).userId;
+
+  app.get("/me", authed, (req, res) => {
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(uid(req));
+    res.json(publicUser(user));
+  });
+
+  app.patch("/me", authed, (req, res) => {
+    const parsed = z.object({ name: z.string().min(1) }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+    db.prepare("UPDATE users SET name = ? WHERE id = ?").run(parsed.data.name, uid(req));
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(uid(req));
+    res.json(publicUser(user));
+  });
+
+  app.get("/me/addresses", authed, (req, res) => {
+    res.json(db.prepare("SELECT * FROM addresses WHERE user_id = ?").all(uid(req)));
+  });
+
+  app.post("/me/addresses", authed, (req, res) => {
+    const parsed = z.object({
+      label: z.string().min(1),
+      street: z.string().min(1),
+      city: z.string().min(1),
+    }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+    const count = (db.prepare("SELECT COUNT(*) AS n FROM addresses WHERE user_id = ?").get(uid(req)) as any).n;
+    const info = db.prepare(
+      "INSERT INTO addresses (user_id, label, street, city, is_default) VALUES (?, ?, ?, ?, ?)"
+    ).run(uid(req), parsed.data.label, parsed.data.street, parsed.data.city, count === 0 ? 1 : 0);
+    res.status(201).json(db.prepare("SELECT * FROM addresses WHERE id = ?").get(Number(info.lastInsertRowid)));
+  });
+
+  app.delete("/me/addresses/:id", authed, (req, res) => {
+    const info = db.prepare("DELETE FROM addresses WHERE id = ? AND user_id = ?")
+      .run(Number(req.params.id), uid(req));
+    if (info.changes === 0) return res.status(404).json({ error: "Not found" });
+    res.status(204).end();
   });
 
   // global error handler
