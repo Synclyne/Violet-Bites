@@ -110,6 +110,36 @@ export function createApp(db: DB) {
     res.json({ ...item, options, reviews });
   });
 
+  app.get("/favorites", authed, (req, res) => {
+    res.json(db.prepare(`
+      SELECT m.* FROM favorites f JOIN menu_items m ON m.id = f.menu_item_id
+      WHERE f.user_id = ?
+    `).all(uid(req)));
+  });
+
+  app.post("/favorites", authed, (req, res) => {
+    const parsed = z.object({ menuItemId: z.number().int() }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+    db.prepare("INSERT OR IGNORE INTO favorites (user_id, menu_item_id) VALUES (?, ?)")
+      .run(uid(req), parsed.data.menuItemId);
+    res.status(201).json({ ok: true });
+  });
+
+  app.delete("/favorites/:menuItemId", authed, (req, res) => {
+    db.prepare("DELETE FROM favorites WHERE user_id = ? AND menu_item_id = ?")
+      .run(uid(req), Number(req.params.menuItemId));
+    res.status(204).end();
+  });
+
+  app.post("/discounts/validate", authed, (req, res) => {
+    const parsed = z.object({ code: z.string().min(1) }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+    const row = db.prepare("SELECT * FROM discount_codes WHERE code = ? AND active = 1")
+      .get(parsed.data.code.toUpperCase()) as any;
+    if (!row) return res.status(404).json({ error: "Invalid code" });
+    res.json({ percentOff: row.percent_off });
+  });
+
   // global error handler
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error(err);
