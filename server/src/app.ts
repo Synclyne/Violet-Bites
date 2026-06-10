@@ -8,6 +8,16 @@ export function createApp(db: DB) {
   const app = express();
   app.use(express.json());
 
+  // CORS: native apps ignore this, but the Expo web build (and browser-based
+  // testing) needs it since the API lives on a different origin.
+  app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+    if (req.method === "OPTIONS") return res.sendStatus(204);
+    next();
+  });
+
   const registerSchema = z.object({
     name: z.string().min(1),
     email: z.string().email(),

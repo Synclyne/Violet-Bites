@@ -1,5 +1,5 @@
-import { create } from "zustand";
-import * as SecureStore from "expo-secure-store";
+﻿import { create } from "zustand";
+import { storage } from "../lib/storage";
 import { api, setAuthToken, setOnUnauthorized } from "../lib/api";
 import type { User } from "../lib/types";
 
@@ -17,13 +17,13 @@ interface AuthState {
 export const useAuth = create<AuthState>((set) => {
   const adopt = async (token: string, user: User) => {
     setAuthToken(token);
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    await storage.set(TOKEN_KEY, token);
     set({ user });
   };
 
   setOnUnauthorized(() => {
     setAuthToken(null);
-    SecureStore.deleteItemAsync(TOKEN_KEY);
+    storage.delete(TOKEN_KEY);
     set({ user: null });
   });
 
@@ -31,7 +31,7 @@ export const useAuth = create<AuthState>((set) => {
     user: null,
     hydrated: false,
     hydrate: async () => {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await storage.get(TOKEN_KEY);
       if (token) {
         setAuthToken(token);
         try {
@@ -40,7 +40,7 @@ export const useAuth = create<AuthState>((set) => {
           return;
         } catch {
           setAuthToken(null);
-          await SecureStore.deleteItemAsync(TOKEN_KEY);
+          await storage.delete(TOKEN_KEY);
         }
       }
       set({ hydrated: true });
@@ -59,7 +59,7 @@ export const useAuth = create<AuthState>((set) => {
     },
     logout: async () => {
       setAuthToken(null);
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await storage.delete(TOKEN_KEY);
       set({ user: null });
     },
   };

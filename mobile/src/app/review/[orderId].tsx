@@ -20,9 +20,9 @@ export default function ReviewOrder() {
         method: "POST",
         body: { orderId: Number(orderId), rating, comment: comment.trim() },
       });
-      Alert.alert("Thanks!", "Your review was submitted.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      // navigate first: Alert is a no-op on web, so back() must not live in its callback
+      router.back();
+      Alert.alert("Thanks!", "Your review was submitted.");
     } catch (e: any) {
       Alert.alert("Couldn't submit", e.message ?? "Try again");
     } finally {
