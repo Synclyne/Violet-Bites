@@ -231,6 +231,41 @@ export function createApp(db: DB) {
     res.json(loadOrder(order.id));
   });
 
+  app.post("/reviews", authed, (req, res) => {
+    const parsed = z.object({
+      orderId: z.number().int(),
+      rating: z.number().int().min(1).max(5),
+      comment: z.string().max(1000).default(""),
+    }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+    const { orderId, rating, comment } = parsed.data;
+
+    const order = db.prepare("SELECT * FROM orders WHERE id = ? AND user_id = ?")
+      .get(orderId, uid(req)) as any;
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.status !== "delivered") return res.status(409).json({ error: "Order not delivered yet" });
+    const existing = db.prepare("SELECT id FROM reviews WHERE order_id = ?").get(orderId);
+    if (existing) return res.status(409).json({ error: "Order already reviewed" });
+
+    const itemIds = db.prepare("SELECT DISTINCT menu_item_id FROM order_items WHERE order_id = ?")
+      .all(orderId) as any[];
+    db.transaction(() => {
+      const ins = db.prepare(
+        "INSERT INTO reviews (user_id, menu_item_id, order_id, rating, comment) VALUES (?, ?, ?, ?, ?)"
+      );
+      const upd = db.prepare(`
+        UPDATE menu_items SET rating =
+          (SELECT ROUND(AVG(rating), 1) FROM reviews WHERE menu_item_id = ?)
+        WHERE id = ?
+      `);
+      for (const r of itemIds) {
+        ins.run(uid(req), r.menu_item_id, orderId, rating, comment);
+        upd.run(r.menu_item_id, r.menu_item_id);
+      }
+    })();
+    res.status(201).json({ ok: true });
+  });
+
   // global error handler
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error(err);
