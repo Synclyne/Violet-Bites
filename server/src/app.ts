@@ -140,6 +140,97 @@ export function createApp(db: DB) {
     res.json({ percentOff: row.percent_off });
   });
 
+  const round2 = (x: number) => Math.round(x * 100) / 100;
+
+  const orderSchema = z.object({
+    addressId: z.number().int(),
+    paymentMethod: z.enum(["cash", "card"]),
+    discountCode: z.string().optional(),
+    items: z.array(z.object({
+      menuItemId: z.number().int(),
+      quantity: z.number().int().min(1).max(20),
+      optionIds: z.array(z.number().int()).default([]),
+    })).min(1),
+  });
+
+  const DELIVERY_FEE = 2.99;
+
+  function loadOrder(orderId: number) {
+    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId) as any;
+    if (!order) return null;
+    order.items = db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(orderId)
+      .map((i: any) => ({ ...i, selected_options: JSON.parse(i.selected_options) }));
+    order.address = db.prepare("SELECT * FROM addresses WHERE id = ?").get(order.address_id) ?? null;
+    return order;
+  }
+
+  app.post("/orders", authed, (req, res) => {
+    const parsed = orderSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+    const { addressId, paymentMethod, discountCode, items } = parsed.data;
+
+    const address = db.prepare("SELECT * FROM addresses WHERE id = ? AND user_id = ?")
+      .get(addressId, uid(req));
+    if (!address) return res.status(400).json({ error: "Unknown address" });
+
+    let percentOff = 0;
+    if (discountCode) {
+      const code = db.prepare("SELECT * FROM discount_codes WHERE code = ? AND active = 1")
+        .get(discountCode.toUpperCase()) as any;
+      if (!code) return res.status(400).json({ error: "Invalid discount code" });
+      percentOff = code.percent_off;
+    }
+
+    type Line = { menuItemId: number; name: string; unitPrice: number; quantity: number; options: any[] };
+    const lines: Line[] = [];
+    for (const line of items) {
+      const item = db.prepare("SELECT * FROM menu_items WHERE id = ? AND is_available = 1")
+        .get(line.menuItemId) as any;
+      if (!item) return res.status(400).json({ error: `Unknown menu item ${line.menuItemId}` });
+      const options = line.optionIds.map((oid) =>
+        db.prepare("SELECT * FROM item_options WHERE id = ? AND menu_item_id = ?").get(oid, line.menuItemId) as any
+      );
+      if (options.some((o) => !o)) return res.status(400).json({ error: "Invalid option for item" });
+      const unitPrice = round2(item.price + options.reduce((s, o) => s + o.price_delta, 0));
+      lines.push({ menuItemId: item.id, name: item.name, unitPrice, quantity: line.quantity, options });
+    }
+
+    const subtotal = round2(lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0));
+    const discount = round2(subtotal * (percentOff / 100));
+    const total = round2(subtotal - discount + DELIVERY_FEE);
+
+    const orderId = db.transaction(() => {
+      const info = db.prepare(`
+        INSERT INTO orders (user_id, address_id, payment_method, subtotal, discount, delivery_fee, total, discount_code)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(uid(req), addressId, paymentMethod, subtotal, discount, DELIVERY_FEE, total, discountCode?.toUpperCase() ?? null);
+      const id = Number(info.lastInsertRowid);
+      const ins = db.prepare(`
+        INSERT INTO order_items (order_id, menu_item_id, name, unit_price, quantity, selected_options)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      for (const l of lines) {
+        ins.run(id, l.menuItemId, l.name, l.unitPrice, l.quantity,
+          JSON.stringify(l.options.map((o) => ({ id: o.id, name: o.name, price_delta: o.price_delta }))));
+      }
+      return id;
+    })();
+
+    res.status(201).json(loadOrder(orderId));
+  });
+
+  app.get("/orders", authed, (req, res) => {
+    const ids = db.prepare("SELECT id FROM orders WHERE user_id = ? ORDER BY id DESC").all(uid(req)) as any[];
+    res.json(ids.map((r) => loadOrder(r.id)));
+  });
+
+  app.get("/orders/:id", authed, (req, res) => {
+    const order = db.prepare("SELECT id FROM orders WHERE id = ? AND user_id = ?")
+      .get(Number(req.params.id), uid(req)) as any;
+    if (!order) return res.status(404).json({ error: "Not found" });
+    res.json(loadOrder(order.id));
+  });
+
   // global error handler
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error(err);
