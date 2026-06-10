@@ -83,6 +83,33 @@ export function createApp(db: DB) {
     res.status(204).end();
   });
 
+  app.get("/menu", authed, (req, res) => {
+    const categories = db.prepare("SELECT * FROM categories ORDER BY id").all();
+    let sql = "SELECT * FROM menu_items WHERE is_available = 1";
+    const params: unknown[] = [];
+    if (req.query.category) {
+      sql += " AND category_id = ?";
+      params.push(Number(req.query.category));
+    }
+    if (req.query.search) {
+      sql += " AND name LIKE ?";
+      params.push(`%${String(req.query.search)}%`);
+    }
+    res.json({ categories, items: db.prepare(sql).all(...params) });
+  });
+
+  app.get("/menu/:id", authed, (req, res) => {
+    const item = db.prepare("SELECT * FROM menu_items WHERE id = ?").get(Number(req.params.id));
+    if (!item) return res.status(404).json({ error: "Not found" });
+    const options = db.prepare("SELECT * FROM item_options WHERE menu_item_id = ?").all(Number(req.params.id));
+    const reviews = db.prepare(`
+      SELECT r.rating, r.comment, r.created_at, u.name AS user_name
+      FROM reviews r JOIN users u ON u.id = r.user_id
+      WHERE r.menu_item_id = ? ORDER BY r.created_at DESC LIMIT 20
+    `).all(Number(req.params.id));
+    res.json({ ...item, options, reviews });
+  });
+
   // global error handler
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error(err);
