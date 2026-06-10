@@ -68,7 +68,7 @@ app/
 9. **Orders tab** — list of past/active orders with status badges; tap for details; "Reorder" re-fills the cart; "Review" for delivered orders.
 10. **Wishlist tab** — grid of favorited items, tap through to detail.
 11. **Profile tab** — name/email, manage addresses, order count, logout.
-12. **Review screen** — star rating + text for a delivered order's items.
+12. **Review screen** — one star rating (1–5) + comment per delivered order; the server stores a review row against each menu item in that order so item ratings aggregate on the menu.
 
 ## Backend
 
