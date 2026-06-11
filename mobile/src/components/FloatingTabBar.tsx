@@ -25,9 +25,11 @@ export function FloatingTabBar({ state, navigation }: any) {
 
           if (route.name === "promos") {
             return (
-              <Pressable key={route.key} onPress={onPress} style={styles.plusBtn} hitSlop={8}>
-                <Ionicons name="add" size={30} color="#fff" />
-              </Pressable>
+              <View key={route.key} style={styles.item}>
+                <Pressable onPress={onPress} style={styles.plusBtn} hitSlop={8}>
+                  <Ionicons name="add" size={26} color="#fff" />
+                </Pressable>
+              </View>
             );
           }
 
@@ -64,9 +66,8 @@ const styles = StyleSheet.create({
   },
   item: { flex: 1, alignItems: "center", justifyContent: "center", height: "100%" },
   plusBtn: {
-    width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary,
-    alignItems: "center", justifyContent: "center", marginTop: -26,
-    ...shadow, shadowOpacity: 0.3, elevation: 10,
+    width: 46, height: 46, borderRadius: 23, backgroundColor: colors.primary,
+    alignItems: "center", justifyContent: "center",
   },
   badge: {
     position: "absolute", top: -6, right: -10, backgroundColor: colors.accent,
