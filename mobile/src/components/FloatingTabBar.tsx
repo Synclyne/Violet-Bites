@@ -1,8 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { colors, radius, shadow } from "../lib/theme";
 import { useCart } from "../stores/cart";
+import { useNavVisibility } from "../lib/navVisibility";
 
 const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typeof Ionicons.glyphMap }> = {
   index: { on: "home", off: "home-outline" },
@@ -16,10 +18,24 @@ const glass = isLiquidGlassAvailable();
 
 export function FloatingTabBar({ state, navigation }: any) {
   const cartCount = useCart((s) => s.count());
+  const { hidden, setHidden } = useNavVisibility();
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(anim, {
+      toValue: hidden ? 1 : 0,
+      useNativeDriver: true,
+      friction: 10,
+      tension: 60,
+    }).start();
+  }, [hidden]);
+
+  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [0, 130] });
 
   const items = state.routes.map((route: any, index: number) => {
     const focused = state.index === index;
     const onPress = () => {
+      setHidden(false); // switching tabs always reveals the nav
       const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
       if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
     };
@@ -54,7 +70,7 @@ export function FloatingTabBar({ state, navigation }: any) {
   });
 
   return (
-    <View style={styles.wrap} pointerEvents="box-none">
+    <Animated.View style={[styles.wrap, { transform: [{ translateY }] }]} pointerEvents="box-none">
       {glass ? (
         <GlassView glassEffectStyle="regular" isInteractive style={[styles.bar, styles.barGlass]}>
           {items}
@@ -62,7 +78,7 @@ export function FloatingTabBar({ state, navigation }: any) {
       ) : (
         <View style={styles.bar}>{items}</View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 

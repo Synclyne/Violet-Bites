@@ -6,6 +6,7 @@ import { api } from "../../lib/api";
 import type { MenuItemDetail, Order, OrderStatus } from "../../lib/types";
 import { colors, radius, shadow } from "../../lib/theme";
 import { useCart } from "../../stores/cart";
+import { useHideNavOnScroll } from "../../lib/navVisibility";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   placed: "Placed", preparing: "Preparing", on_the_way: "On the way", delivered: "Delivered",
@@ -16,6 +17,7 @@ export default function Orders() {
   const addToCart = useCart((s) => s.add);
   const [orders, setOrders] = useState<Order[]>([]);
   const [error, setError] = useState("");
+  const onScroll = useHideNavOnScroll();
 
   useFocusEffect(useCallback(() => {
     api<Order[]>("/orders").then(setOrders).catch((e) => setError(e.message));
@@ -47,6 +49,8 @@ export default function Orders() {
     <View style={styles.container}>
       <Text style={styles.pageTitle}>Orders</Text>
       <FlatList
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{ padding: 16, paddingTop: 4, gap: 12, paddingBottom: 120 }}
         data={orders}
         keyExtractor={(o) => String(o.id)}

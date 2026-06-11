@@ -7,6 +7,7 @@ import type { Address, Order } from "../../lib/types";
 import { useAuth } from "../../stores/auth";
 import { useWishlist } from "../../stores/wishlist";
 import { colors, radius, shadow } from "../../lib/theme";
+import { useHideNavOnScroll } from "../../lib/navVisibility";
 
 export default function Profile() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function Profile() {
   const favCount = useWishlist((s) => s.items.length);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [orderCount, setOrderCount] = useState(0);
+  const onScroll = useHideNavOnScroll();
 
   useFocusEffect(useCallback(() => {
     api<Address[]>("/me/addresses").then(setAddresses).catch(() => {});
@@ -36,7 +38,8 @@ export default function Profile() {
   const initial = (user?.name?.[0] ?? "?").toUpperCase();
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}
+      onScroll={onScroll} scrollEventThrottle={16}>
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.name}>{user?.name}</Text>

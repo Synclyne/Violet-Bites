@@ -5,11 +5,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../lib/api";
 import { colors, radius, shadow } from "../../lib/theme";
 import { usePromo } from "../../stores/promo";
+import { useHideNavOnScroll } from "../../lib/navVisibility";
 
 interface Code { code: string; percent_off: number }
 
 export default function Promos() {
   const { code: applied, apply, clear } = usePromo();
+  const onScroll = useHideNavOnScroll();
   const [codes, setCodes] = useState<Code[]>([]);
   const [input, setInput] = useState("");
   const [msg, setMsg] = useState("");
@@ -68,6 +70,8 @@ export default function Promos() {
       <FlatList
         data={codes}
         keyExtractor={(c) => c.code}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{ gap: 12, paddingBottom: 120 }}
         renderItem={({ item: c }) => {
           const isActive = applied === c.code;

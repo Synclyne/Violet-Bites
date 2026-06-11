@@ -10,6 +10,7 @@ import { colors, radius, shadow } from "../../lib/theme";
 import { MenuItemCard } from "../../components/MenuItemCard";
 import { useAuth } from "../../stores/auth";
 import { useWishlist } from "../../stores/wishlist";
+import { useHideNavOnScroll } from "../../lib/navVisibility";
 
 const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   All: "sparkles-outline",
@@ -31,6 +32,7 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const onScroll = useHideNavOnScroll();
 
   const load = useCallback(async () => {
     try {
@@ -117,6 +119,8 @@ export default function Home() {
           data={items}
           numColumns={2}
           keyExtractor={(i) => String(i.id)}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
           contentContainerStyle={{ padding: 6, paddingBottom: 120 }}
           renderItem={({ item }) => <MenuItemCard item={item} />}
           refreshControl={
