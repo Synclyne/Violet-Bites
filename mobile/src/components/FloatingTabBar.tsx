@@ -14,8 +14,9 @@ const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typ
   profile: { on: "person", off: "person-outline" },
 };
 
-const BUBBLE = 46;
-const PAD = 8; // bar horizontal padding
+const PAD = 6; // bar horizontal padding
+const BUBBLE_H = 52; // selection lens height inside the 64px bar
+const BUBBLE_INSET = 3; // gap between lens and slot edges
 
 // Liquid Glass needs iOS 26+; everywhere else we fall back to the solid pill.
 const glass = isLiquidGlassAvailable();
@@ -55,11 +56,12 @@ export function FloatingTabBar({ state, navigation }: any) {
   }, [state.index]);
 
   const slotW = barW > 0 ? (barW - PAD * 2) / state.routes.length : 0;
+  const bubbleW = Math.max(slotW - BUBBLE_INSET * 2, 0);
   const bubbleX = bubbleA.interpolate({
     inputRange: [0, Math.max(state.routes.length - 1, 1)],
     outputRange: [
-      PAD + (slotW - BUBBLE) / 2,
-      PAD + (state.routes.length - 1) * slotW + (slotW - BUBBLE) / 2,
+      PAD + BUBBLE_INSET,
+      PAD + (state.routes.length - 1) * slotW + BUBBLE_INSET,
     ],
   });
 
@@ -97,7 +99,16 @@ export function FloatingTabBar({ state, navigation }: any) {
             onLayout={(e) => setBarW(e.nativeEvent.layout.width)}
           >
             {slotW > 0 && (
-              <Animated.View style={[styles.bubble, { transform: [{ translateX: bubbleX }] }]} />
+              <Animated.View
+                style={[styles.bubbleWrap, { width: bubbleW, transform: [{ translateX: bubbleX }] }]}
+                pointerEvents="none"
+              >
+                {glass ? (
+                  <GlassView glassEffectStyle="regular" style={styles.bubbleGlass} />
+                ) : (
+                  <View style={styles.bubbleSolid} />
+                )}
+              </Animated.View>
             )}
             {state.routes.map((route: any, index: number) => {
               const focused = state.index === index;
@@ -154,10 +165,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-around", paddingHorizontal: PAD,
   },
   glassReset: { backgroundColor: "transparent", shadowOpacity: 0, elevation: 0 },
-  bubble: {
-    position: "absolute", left: 0, width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2,
-    backgroundColor: glass ? "rgba(124,58,237,0.14)" : "#F3E8FF",
+  bubbleWrap: {
+    position: "absolute", left: 0, top: (64 - BUBBLE_H) / 2, height: BUBBLE_H,
+    borderRadius: BUBBLE_H / 2, overflow: "hidden",
   },
+  bubbleGlass: { flex: 1, borderRadius: BUBBLE_H / 2 },
+  bubbleSolid: { flex: 1, borderRadius: BUBBLE_H / 2, backgroundColor: "#F3E8FF" },
   item: { flex: 1, alignItems: "center", justifyContent: "center", height: "100%" },
   plusBtn: {
     width: 46, height: 46, borderRadius: 23, backgroundColor: colors.primary,
