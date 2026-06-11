@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { colors, radius, shadow } from "../lib/theme";
 import { useCart } from "../stores/cart";
 
@@ -10,48 +11,57 @@ const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typ
   profile: { on: "person", off: "person-outline" },
 };
 
+// Liquid Glass needs iOS 26+; everywhere else we fall back to the solid pill.
+const glass = isLiquidGlassAvailable();
+
 export function FloatingTabBar({ state, navigation }: any) {
   const cartCount = useCart((s) => s.count());
 
+  const items = state.routes.map((route: any, index: number) => {
+    const focused = state.index === index;
+    const onPress = () => {
+      const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+      if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+    };
+
+    if (route.name === "promos") {
+      return (
+        <View key={route.key} style={styles.item}>
+          <Pressable onPress={onPress} style={styles.plusBtn} hitSlop={8}>
+            <Ionicons name="add" size={26} color="#fff" />
+          </Pressable>
+        </View>
+      );
+    }
+
+    const icon = ICONS[route.name] ?? ICONS.index;
+    return (
+      <Pressable key={route.key} onPress={onPress} style={styles.item} hitSlop={8}>
+        <View>
+          <Ionicons
+            name={focused ? icon.on : icon.off}
+            size={24}
+            color={focused ? colors.primary : colors.textMuted}
+          />
+          {route.name === "cart" && cartCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{cartCount}</Text>
+            </View>
+          )}
+        </View>
+      </Pressable>
+    );
+  });
+
   return (
     <View style={styles.wrap} pointerEvents="box-none">
-      <View style={styles.bar}>
-        {state.routes.map((route: any, index: number) => {
-          const focused = state.index === index;
-          const onPress = () => {
-            const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
-            if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
-          };
-
-          if (route.name === "promos") {
-            return (
-              <View key={route.key} style={styles.item}>
-                <Pressable onPress={onPress} style={styles.plusBtn} hitSlop={8}>
-                  <Ionicons name="add" size={26} color="#fff" />
-                </Pressable>
-              </View>
-            );
-          }
-
-          const icon = ICONS[route.name] ?? ICONS.index;
-          return (
-            <Pressable key={route.key} onPress={onPress} style={styles.item} hitSlop={8}>
-              <View>
-                <Ionicons
-                  name={focused ? icon.on : icon.off}
-                  size={24}
-                  color={focused ? colors.primary : colors.textMuted}
-                />
-                {route.name === "cart" && cartCount > 0 && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{cartCount}</Text>
-                  </View>
-                )}
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
+      {glass ? (
+        <GlassView glassEffectStyle="regular" isInteractive style={[styles.bar, styles.barGlass]}>
+          {items}
+        </GlassView>
+      ) : (
+        <View style={styles.bar}>{items}</View>
+      )}
     </View>
   );
 }
@@ -62,7 +72,10 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "space-around",
     backgroundColor: colors.surface, borderRadius: radius.pill,
     marginHorizontal: 20, marginBottom: 24, height: 64, alignSelf: "stretch",
-    paddingHorizontal: 8, ...shadow, shadowOpacity: 0.16, elevation: 8,
+    paddingHorizontal: 8, overflow: "hidden", ...shadow, shadowOpacity: 0.16, elevation: 8,
+  },
+  barGlass: {
+    backgroundColor: "transparent", shadowOpacity: 0, elevation: 0,
   },
   item: { flex: 1, alignItems: "center", justifyContent: "center", height: "100%" },
   plusBtn: {
