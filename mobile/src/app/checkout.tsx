@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "../lib/api";
 import type { Address, Order } from "../lib/types";
 import { colors, radius, shadow } from "../lib/theme";
@@ -96,10 +97,14 @@ export default function Checkout() {
       <Text style={styles.section}>Payment method</Text>
       {(["cash", "card"] as const).map((m) => (
         <Pressable key={m} onPress={() => setPayment(m)}
-          style={[styles.card, payment === m && styles.cardActive]}>
+          style={[styles.card, styles.payRow, payment === m && styles.cardActive]}>
+          <Ionicons name={m === "cash" ? "cash-outline" : "card-outline"} size={20}
+            color={payment === m ? colors.primary : colors.textMuted} />
           <Text style={styles.cardTitle}>
-            {m === "cash" ? "💵 Cash on delivery" : "💳 Card (simulated)"}
+            {m === "cash" ? "Cash on delivery" : "Card (simulated)"}
           </Text>
+          <Ionicons name={payment === m ? "radio-button-on" : "radio-button-off"} size={20}
+            color={payment === m ? colors.primary : colors.border} style={{ marginLeft: "auto" }} />
         </Pressable>
       ))}
 
@@ -121,6 +126,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   section: { fontSize: 16, fontWeight: "800", color: colors.text, marginTop: 8 },
   card: { backgroundColor: colors.surface, borderRadius: radius.card, padding: 14, ...shadow },
+  payRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   cardActive: { borderWidth: 2, borderColor: colors.primary },
   cardTitle: { fontWeight: "700", color: colors.text },
   cardSub: { color: colors.textMuted, marginTop: 2 },

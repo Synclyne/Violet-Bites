@@ -3,18 +3,27 @@ import {
   FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../lib/api";
 import type { Category, MenuItem } from "../../lib/types";
-import { colors, radius } from "../../lib/theme";
+import { colors, radius, shadow } from "../../lib/theme";
 import { MenuItemCard } from "../../components/MenuItemCard";
 import { useAuth } from "../../stores/auth";
-import { useCart } from "../../stores/cart";
 import { useWishlist } from "../../stores/wishlist";
+
+const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  All: "sparkles-outline",
+  Burgers: "fast-food-outline",
+  Pizza: "pizza-outline",
+  Salads: "leaf-outline",
+  Drinks: "cafe-outline",
+  Desserts: "ice-cream-outline",
+  Sides: "restaurant-outline",
+};
 
 export default function Home() {
   const router = useRouter();
   const user = useAuth((s) => s.user);
-  const cartCount = useCart((s) => s.count());
   const loadWishlist = useWishlist((s) => s.load);
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -42,33 +51,40 @@ export default function Home() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadWishlist().catch(() => {}); }, []);
 
+  const initial = (user?.name?.[0] ?? "?").toUpperCase();
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.hi}>Hi {user?.name?.split(" ")[0]} 👋</Text>
+          <Text style={styles.hi}>Hi {user?.name?.split(" ")[0]}</Text>
           <Text style={styles.hungry}>Hungry? Order & eat.</Text>
         </View>
-        <Pressable style={styles.cartBtn} onPress={() => router.push("/cart")}>
-          <Text style={{ fontSize: 20 }}>🛒</Text>
-          {cartCount > 0 && (
-            <View style={styles.badge}><Text style={styles.badgeText}>{cartCount}</Text></View>
-          )}
+        <Pressable style={styles.avatar} onPress={() => router.push("/profile")}>
+          <Text style={styles.avatarText}>{initial}</Text>
         </Pressable>
       </View>
 
-      <TextInput
-        style={styles.search}
-        placeholder="Search food..."
-        placeholderTextColor={colors.textMuted}
-        value={search}
-        onChangeText={setSearch}
-      />
+      <View style={styles.searchWrap}>
+        <Ionicons name="search" size={18} color={colors.textMuted} />
+        <TextInput
+          style={styles.search}
+          placeholder="Search food..."
+          placeholderTextColor={colors.textMuted}
+          value={search}
+          onChangeText={setSearch}
+        />
+        {search.length > 0 && (
+          <Pressable onPress={() => setSearch("")} hitSlop={8}>
+            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+          </Pressable>
+        )}
+      </View>
 
       <View>
         <FlatList
           horizontal showsHorizontalScrollIndicator={false}
-          data={[{ id: 0, name: "All", icon: "✨" } as Category, ...categories]}
+          data={[{ id: 0, name: "All", icon: "" } as Category, ...categories]}
           keyExtractor={(c) => String(c.id)}
           contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}
           renderItem={({ item: c }) => {
@@ -76,11 +92,14 @@ export default function Home() {
             return (
               <Pressable
                 onPress={() => setActiveCat(c.id === 0 ? null : c.id)}
-                style={[styles.chip, active && { backgroundColor: colors.primary }]}
+                style={[styles.chip, active && { backgroundColor: colors.primary, borderColor: colors.primary }]}
               >
-                <Text style={[styles.chipText, active && { color: "#fff" }]}>
-                  {c.icon} {c.name}
-                </Text>
+                <Ionicons
+                  name={CATEGORY_ICONS[c.name] ?? "restaurant-outline"}
+                  size={15}
+                  color={active ? "#fff" : colors.primary}
+                />
+                <Text style={[styles.chipText, active && { color: "#fff" }]}>{c.name}</Text>
               </Pressable>
             );
           }}
@@ -89,6 +108,7 @@ export default function Home() {
 
       {error ? (
         <View style={styles.center}>
+          <Ionicons name="cloud-offline-outline" size={44} color={colors.textMuted} />
           <Text style={styles.error}>{error}</Text>
           <Pressable onPress={load}><Text style={styles.retry}>Tap to retry</Text></Pressable>
         </View>
@@ -97,7 +117,7 @@ export default function Home() {
           data={items}
           numColumns={2}
           keyExtractor={(i) => String(i.id)}
-          contentContainerStyle={{ padding: 6, paddingBottom: 24 }}
+          contentContainerStyle={{ padding: 6, paddingBottom: 120 }}
           renderItem={({ item }) => <MenuItemCard item={item} />}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={async () => {
@@ -121,19 +141,20 @@ const styles = StyleSheet.create({
   },
   hi: { fontSize: 22, fontWeight: "800", color: colors.text },
   hungry: { fontSize: 14, color: colors.textMuted },
-  cartBtn: { padding: 8 },
-  badge: {
-    position: "absolute", top: 0, right: 0, backgroundColor: colors.accent,
-    borderRadius: radius.pill, minWidth: 18, height: 18,
-    alignItems: "center", justifyContent: "center", paddingHorizontal: 4,
+  avatar: {
+    width: 42, height: 42, borderRadius: 21, backgroundColor: colors.primary,
+    alignItems: "center", justifyContent: "center",
   },
-  badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
-  search: {
+  avatarText: { color: "#fff", fontWeight: "800", fontSize: 17 },
+  searchWrap: {
+    flexDirection: "row", alignItems: "center", gap: 8,
     marginHorizontal: 16, marginBottom: 12, backgroundColor: colors.surface,
-    borderRadius: radius.input, borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: colors.text,
+    borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 14, ...shadow, shadowOpacity: 0.04,
   },
+  search: { flex: 1, paddingVertical: 11, fontSize: 15, color: colors.text },
   chip: {
+    flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: colors.surface, borderRadius: radius.pill,
     paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: colors.border,
     marginBottom: 12,

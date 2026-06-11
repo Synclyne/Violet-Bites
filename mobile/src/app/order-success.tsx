@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
 import { Button } from "../components/Button";
 
@@ -8,7 +9,9 @@ export default function OrderSuccess() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
   return (
     <View style={styles.container}>
-      <Text style={{ fontSize: 72 }}>🛵</Text>
+      <View style={styles.iconWrap}>
+        <Ionicons name="bicycle" size={56} color={colors.primary} />
+      </View>
       <Text style={styles.title}>Order Successful!</Text>
       <Text style={styles.sub}>
         Order #{orderId} is in. Your payment went through — food is on the way soon.
@@ -25,6 +28,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1, backgroundColor: colors.background, alignItems: "center",
     justifyContent: "center", padding: 24, gap: 12,
+  },
+  iconWrap: {
+    width: 110, height: 110, borderRadius: 55, backgroundColor: "#F3E8FF",
+    alignItems: "center", justifyContent: "center", marginBottom: 8,
   },
   title: { fontSize: 26, fontWeight: "800", color: colors.text },
   sub: { textAlign: "center", color: colors.textMuted, lineHeight: 20 },

@@ -32,6 +32,14 @@ describe("favorites", () => {
 });
 
 describe("discounts", () => {
+  it("lists active codes", async () => {
+    const res = await request(app).get("/discounts").set(auth());
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBeGreaterThanOrEqual(2);
+    expect(res.body[0]).toHaveProperty("code");
+    expect(res.body[0]).toHaveProperty("percent_off");
+  });
+
   it("validates a known code", async () => {
     const res = await request(app).post("/discounts/validate").set(auth()).send({ code: "WELCOME10" });
     expect(res.status).toBe(200);

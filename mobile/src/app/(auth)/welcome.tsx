@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { Button } from "../../components/Button";
 
 export default function Welcome() {
@@ -7,7 +8,9 @@ export default function Welcome() {
   return (
     <View style={styles.container}>
       <View style={styles.hero}>
-        <Text style={styles.emoji}>🍔</Text>
+        <View style={styles.logoWrap}>
+          <Ionicons name="fast-food" size={64} color="#7C3AED" />
+        </View>
         <Text style={styles.title}>Violet Bites</Text>
         <Text style={styles.tagline}>Fresh food, delivered to your door.</Text>
       </View>
@@ -23,7 +26,10 @@ export default function Welcome() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#7C3AED", justifyContent: "space-between", padding: 24, paddingTop: 120, paddingBottom: 48 },
   hero: { alignItems: "center", gap: 12 },
-  emoji: { fontSize: 72 },
+  logoWrap: {
+    width: 120, height: 120, borderRadius: 60, backgroundColor: "#fff",
+    alignItems: "center", justifyContent: "center", marginBottom: 8,
+  },
   title: { fontSize: 36, fontWeight: "800", color: "#fff" },
   tagline: { fontSize: 16, color: "#E9D5FF" },
   actions: { gap: 12 },

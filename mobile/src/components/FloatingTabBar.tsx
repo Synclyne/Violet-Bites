@@ -1,0 +1,77 @@
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { colors, radius, shadow } from "../lib/theme";
+import { useCart } from "../stores/cart";
+
+const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typeof Ionicons.glyphMap }> = {
+  index: { on: "home", off: "home-outline" },
+  orders: { on: "receipt", off: "receipt-outline" },
+  cart: { on: "cart", off: "cart-outline" },
+  profile: { on: "person", off: "person-outline" },
+};
+
+export function FloatingTabBar({ state, navigation }: any) {
+  const cartCount = useCart((s) => s.count());
+
+  return (
+    <View style={styles.wrap} pointerEvents="box-none">
+      <View style={styles.bar}>
+        {state.routes.map((route: any, index: number) => {
+          const focused = state.index === index;
+          const onPress = () => {
+            const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+            if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+          };
+
+          if (route.name === "promos") {
+            return (
+              <Pressable key={route.key} onPress={onPress} style={styles.plusBtn} hitSlop={8}>
+                <Ionicons name="add" size={30} color="#fff" />
+              </Pressable>
+            );
+          }
+
+          const icon = ICONS[route.name] ?? ICONS.index;
+          return (
+            <Pressable key={route.key} onPress={onPress} style={styles.item} hitSlop={8}>
+              <View>
+                <Ionicons
+                  name={focused ? icon.on : icon.off}
+                  size={24}
+                  color={focused ? colors.primary : colors.textMuted}
+                />
+                {route.name === "cart" && cartCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{cartCount}</Text>
+                  </View>
+                )}
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrap: { position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center" },
+  bar: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-around",
+    backgroundColor: colors.surface, borderRadius: radius.pill,
+    marginHorizontal: 20, marginBottom: 24, height: 64, alignSelf: "stretch",
+    paddingHorizontal: 8, ...shadow, shadowOpacity: 0.16, elevation: 8,
+  },
+  item: { flex: 1, alignItems: "center", justifyContent: "center", height: "100%" },
+  plusBtn: {
+    width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary,
+    alignItems: "center", justifyContent: "center", marginTop: -26,
+    ...shadow, shadowOpacity: 0.3, elevation: 10,
+  },
+  badge: {
+    position: "absolute", top: -6, right: -10, backgroundColor: colors.accent,
+    borderRadius: radius.pill, minWidth: 18, height: 18,
+    alignItems: "center", justifyContent: "center", paddingHorizontal: 4,
+  },
+  badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
+});

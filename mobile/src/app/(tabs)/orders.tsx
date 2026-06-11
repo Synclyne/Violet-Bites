@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../lib/api";
 import type { MenuItemDetail, Order, OrderStatus } from "../../lib/types";
 import { colors, radius, shadow } from "../../lib/theme";
@@ -24,7 +25,7 @@ export default function Orders() {
   if (orders.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={{ fontSize: 48 }}>🧾</Text>
+        <Ionicons name="receipt-outline" size={56} color={colors.textMuted} />
         <Text style={{ color: colors.textMuted }}>No orders yet — discover and order now</Text>
       </View>
     );
@@ -43,46 +44,52 @@ export default function Orders() {
   };
 
   return (
-    <FlatList
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={{ padding: 16, gap: 12, paddingTop: 60 }}
-      data={orders}
-      keyExtractor={(o) => String(o.id)}
-      renderItem={({ item: o }) => (
-        <Pressable style={styles.card} onPress={() => router.push(`/order/${o.id}`)}>
-          <View style={styles.rowBetween}>
-            <Text style={styles.title}>Order #{o.id}</Text>
-            <View style={[styles.badge,
-              o.status === "delivered" ? { backgroundColor: "#DCFCE7" } : { backgroundColor: "#F3E8FF" }]}>
-              <Text style={[styles.badgeText,
-                o.status === "delivered" ? { color: colors.success } : { color: colors.primary }]}>
-                {STATUS_LABEL[o.status]}
-              </Text>
+    <View style={styles.container}>
+      <Text style={styles.pageTitle}>Orders</Text>
+      <FlatList
+        contentContainerStyle={{ padding: 16, paddingTop: 4, gap: 12, paddingBottom: 120 }}
+        data={orders}
+        keyExtractor={(o) => String(o.id)}
+        renderItem={({ item: o }) => (
+          <Pressable style={styles.card} onPress={() => router.push(`/order/${o.id}`)}>
+            <View style={styles.rowBetween}>
+              <Text style={styles.title}>Order #{o.id}</Text>
+              <View style={[styles.badge,
+                o.status === "delivered" ? { backgroundColor: "#DCFCE7" } : { backgroundColor: "#F3E8FF" }]}>
+                <Text style={[styles.badgeText,
+                  o.status === "delivered" ? { color: colors.success } : { color: colors.primary }]}>
+                  {STATUS_LABEL[o.status]}
+                </Text>
+              </View>
             </View>
-          </View>
-          <Text style={styles.sub}>
-            {o.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}
-          </Text>
-          <Text style={styles.total}>${o.total.toFixed(2)}</Text>
-          {o.status === "delivered" && (
-            <View style={styles.actions}>
-              <Pressable style={styles.actionBtn} onPress={() => reorder(o)}>
-                <Text style={styles.actionText}>Reorder</Text>
-              </Pressable>
-              <Pressable style={[styles.actionBtn, { backgroundColor: colors.accent }]}
-                onPress={() => router.push(`/review/${o.id}`)}>
-                <Text style={styles.actionText}>Review</Text>
-              </Pressable>
-            </View>
-          )}
-        </Pressable>
-      )}
-    />
+            <Text style={styles.sub}>
+              {o.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}
+            </Text>
+            <Text style={styles.total}>${o.total.toFixed(2)}</Text>
+            {o.status === "delivered" && (
+              <View style={styles.actions}>
+                <Pressable style={styles.actionBtn} onPress={() => reorder(o)}>
+                  <Ionicons name="refresh" size={14} color="#fff" />
+                  <Text style={styles.actionText}>Reorder</Text>
+                </Pressable>
+                <Pressable style={[styles.actionBtn, { backgroundColor: colors.accent }]}
+                  onPress={() => router.push(`/review/${o.id}`)}>
+                  <Ionicons name="star-outline" size={14} color="#fff" />
+                  <Text style={styles.actionText}>Review</Text>
+                </Pressable>
+              </View>
+            )}
+          </Pressable>
+        )}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8 },
+  container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 },
+  pageTitle: { fontSize: 24, fontWeight: "800", color: colors.text, paddingHorizontal: 16 },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: colors.background },
   card: { backgroundColor: colors.surface, borderRadius: radius.card, padding: 14, ...shadow },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   title: { fontWeight: "800", color: colors.text },
@@ -92,8 +99,9 @@ const styles = StyleSheet.create({
   total: { fontWeight: "800", color: colors.primary, marginTop: 6 },
   actions: { flexDirection: "row", gap: 8, marginTop: 10 },
   actionBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
     backgroundColor: colors.primary, borderRadius: radius.pill,
-    paddingHorizontal: 16, paddingVertical: 8,
+    paddingHorizontal: 14, paddingVertical: 8,
   },
   actionText: { color: "#fff", fontWeight: "700", fontSize: 13 },
 });

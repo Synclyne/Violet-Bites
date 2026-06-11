@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../lib/api";
 import { colors, radius } from "../../lib/theme";
 import { Button } from "../../components/Button";
@@ -36,7 +37,11 @@ export default function ReviewOrder() {
       <View style={styles.stars}>
         {[1, 2, 3, 4, 5].map((n) => (
           <Pressable key={n} onPress={() => setRating(n)} hitSlop={6}>
-            <Text style={{ fontSize: 36, opacity: n <= rating ? 1 : 0.3 }}>⭐</Text>
+            <Ionicons
+              name={n <= rating ? "star" : "star-outline"}
+              size={40}
+              color={n <= rating ? "#F59E0B" : colors.border}
+            />
           </Pressable>
         ))}
       </View>
@@ -57,7 +62,7 @@ export default function ReviewOrder() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background, padding: 24, gap: 16 },
   title: { fontSize: 22, fontWeight: "800", color: colors.text, textAlign: "center", marginTop: 16 },
-  stars: { flexDirection: "row", justifyContent: "center", gap: 8 },
+  stars: { flexDirection: "row", justifyContent: "center", gap: 10 },
   input: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.input, padding: 14, minHeight: 100, textAlignVertical: "top",

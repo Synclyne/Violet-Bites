@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../lib/api";
 import type { Order, OrderStatus } from "../../lib/types";
 import { colors, radius, shadow } from "../../lib/theme";
 import { Button } from "../../components/Button";
 
-const STEPS: { status: OrderStatus; label: string; icon: string }[] = [
-  { status: "placed", label: "Order placed", icon: "🧾" },
-  { status: "preparing", label: "Preparing your food", icon: "👨‍🍳" },
-  { status: "on_the_way", label: "On the way", icon: "🛵" },
-  { status: "delivered", label: "Delivered", icon: "✅" },
+const STEPS: { status: OrderStatus; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { status: "placed", label: "Order placed", icon: "receipt-outline" },
+  { status: "preparing", label: "Preparing your food", icon: "restaurant-outline" },
+  { status: "on_the_way", label: "On the way", icon: "bicycle-outline" },
+  { status: "delivered", label: "Delivered", icon: "checkmark-done-outline" },
 ];
 
 export default function OrderTracking() {
@@ -37,20 +38,23 @@ export default function OrderTracking() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ padding: 16, gap: 12 }}>
+      contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
       <View style={styles.card}>
         {STEPS.map((s, i) => {
           const done = i <= currentIdx;
           return (
             <View key={s.status} style={styles.step}>
               <View style={[styles.dot, done && { backgroundColor: colors.primary }]}>
-                <Text style={{ fontSize: 14 }}>{s.icon}</Text>
+                <Ionicons name={s.icon} size={16} color={done ? "#fff" : colors.textMuted} />
               </View>
               <Text style={[styles.stepLabel, done && { color: colors.text, fontWeight: "700" }]}>
                 {s.label}
               </Text>
               {i === currentIdx && order.status !== "delivered" && (
                 <Text style={styles.now}>now</Text>
+              )}
+              {done && i < currentIdx && (
+                <Ionicons name="checkmark" size={16} color={colors.success} style={{ marginLeft: "auto" }} />
               )}
             </View>
           );
@@ -80,7 +84,12 @@ export default function OrderTracking() {
       {order.address && (
         <View style={styles.card}>
           <Text style={styles.section}>Deliver to</Text>
-          <Text style={styles.line}>{order.address.label} — {order.address.street}, {order.address.city}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Ionicons name="location-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.line}>
+              {order.address.label} — {order.address.street}, {order.address.city}
+            </Text>
+          </View>
         </View>
       )}
 
@@ -97,7 +106,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.surface, borderRadius: radius.card, padding: 16, ...shadow },
   step: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 },
   dot: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: colors.border,
+    width: 34, height: 34, borderRadius: 17, backgroundColor: colors.border,
     alignItems: "center", justifyContent: "center",
   },
   stepLabel: { color: colors.textMuted, fontSize: 15 },

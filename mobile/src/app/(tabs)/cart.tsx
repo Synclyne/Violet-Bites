@@ -1,55 +1,41 @@
-import { useState } from "react";
-import { FlatList, StyleSheet, Text, TextInput, View, Pressable } from "react-native";
+import { FlatList, StyleSheet, Text, View, Pressable } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useCart } from "../stores/cart";
-import { api } from "../lib/api";
-import { colors, radius, shadow } from "../lib/theme";
-import { Button } from "../components/Button";
-import { Stepper } from "../components/Stepper";
+import { Ionicons } from "@expo/vector-icons";
+import { useCart } from "../../stores/cart";
+import { usePromo } from "../../stores/promo";
+import { colors, radius, shadow } from "../../lib/theme";
+import { Button } from "../../components/Button";
+import { Stepper } from "../../components/Stepper";
 
 export const DELIVERY_FEE = 2.99;
 
 export default function Cart() {
   const router = useRouter();
   const { lines, setQuantity, remove, subtotal } = useCart();
-  const [code, setCode] = useState("");
-  const [percentOff, setPercentOff] = useState(0);
-  const [codeMsg, setCodeMsg] = useState("");
+  const { code, percentOff, clear } = usePromo();
 
   const sub = subtotal();
   const discount = Math.round(sub * percentOff) / 100;
   const total = Math.round((sub - discount + DELIVERY_FEE) * 100) / 100;
 
-  const applyCode = async () => {
-    try {
-      const res = await api<{ percentOff: number }>("/discounts/validate", {
-        method: "POST", body: { code: code.trim() },
-      });
-      setPercentOff(res.percentOff);
-      setCodeMsg(`Applied: ${res.percentOff}% off`);
-    } catch {
-      setPercentOff(0);
-      setCodeMsg("Invalid code");
-    }
-  };
-
   if (lines.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={{ fontSize: 48 }}>🛒</Text>
+        <Ionicons name="cart-outline" size={56} color={colors.textMuted} />
         <Text style={styles.emptyText}>Your cart is empty</Text>
-        <Button title="Browse the menu" onPress={() => router.back()} />
+        <Button title="Browse the menu" onPress={() => router.push("/")} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <Text style={styles.title}>Cart</Text>
       <FlatList
         data={lines}
         keyExtractor={(l) => l.key}
-        contentContainerStyle={{ padding: 16, gap: 12 }}
+        contentContainerStyle={{ padding: 16, paddingTop: 4, gap: 12 }}
         renderItem={({ item: l }) => (
           <View style={styles.line}>
             <Image source={{ uri: l.item.image_url }} style={styles.thumb} contentFit="cover" />
@@ -62,7 +48,7 @@ export default function Cart() {
             </View>
             <View style={{ alignItems: "flex-end", gap: 6 }}>
               <Pressable onPress={() => remove(l.key)} hitSlop={8}>
-                <Text style={{ color: colors.danger }}>Remove</Text>
+                <Ionicons name="trash-outline" size={18} color={colors.danger} />
               </Pressable>
               <Stepper value={l.quantity} onChange={(v) => setQuantity(l.key, v)} min={1} />
             </View>
@@ -71,23 +57,31 @@ export default function Cart() {
       />
 
       <View style={styles.footer}>
-        <View style={styles.codeRow}>
-          <TextInput
-            style={styles.codeInput} placeholder="Discount code" value={code}
-            onChangeText={setCode} autoCapitalize="characters"
-            placeholderTextColor={colors.textMuted}
-          />
-          <Button title="Apply" variant="pink" onPress={applyCode} />
-        </View>
-        {codeMsg ? (
-          <Text style={{ color: percentOff ? colors.success : colors.danger }}>{codeMsg}</Text>
-        ) : null}
+        {code ? (
+          <View style={styles.promoRow}>
+            <Ionicons name="pricetag" size={16} color={colors.accent} />
+            <Text style={styles.promoText}>
+              <Text style={{ fontWeight: "800" }}>{code}</Text> — {percentOff}% off
+            </Text>
+            <Pressable onPress={clear} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable style={styles.promoRow} onPress={() => router.push("/promos")}>
+            <Ionicons name="add-circle-outline" size={18} color={colors.accent} />
+            <Text style={[styles.promoText, { color: colors.accent, fontWeight: "700" }]}>
+              Add a promo code
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+          </Pressable>
+        )}
         <Row label="Subtotal" value={sub} />
         {discount > 0 && <Row label="Discount" value={-discount} accent />}
         <Row label="Delivery fee" value={DELIVERY_FEE} />
         <Row label="Total" value={total} bold />
         <Button title="Checkout" onPress={() =>
-          router.push({ pathname: "/checkout", params: { code: percentOff ? code.trim() : "" } })} />
+          router.push({ pathname: "/checkout", params: { code: code ?? "" } })} />
       </View>
     </View>
   );
@@ -107,7 +101,8 @@ function Row({ label, value, bold, accent }: {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 },
+  title: { fontSize: 24, fontWeight: "800", color: colors.text, paddingHorizontal: 16 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
   emptyText: { fontSize: 16, color: colors.textMuted },
   line: {
@@ -120,13 +115,10 @@ const styles = StyleSheet.create({
   price: { fontWeight: "800", color: colors.primary, marginTop: 4 },
   footer: {
     backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 16, paddingBottom: 28, gap: 8, ...shadow,
+    padding: 16, paddingBottom: 104, gap: 8, ...shadow,
   },
-  codeRow: { flexDirection: "row", gap: 8, alignItems: "center" },
-  codeInput: {
-    flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.input,
-    paddingHorizontal: 12, paddingVertical: 10, color: colors.text,
-  },
+  promoRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
+  promoText: { flex: 1, color: colors.text },
   row: { flexDirection: "row", justifyContent: "space-between" },
   rowLabel: { color: colors.textMuted },
   rowValue: { color: colors.text, fontWeight: "600" },

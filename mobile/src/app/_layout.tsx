@@ -34,12 +34,12 @@ export default function RootLayout() {
     }}>
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="cart" options={{ title: "Cart" }} />
       <Stack.Screen name="checkout" options={{ title: "Checkout" }} />
       <Stack.Screen name="order-success" options={{ headerShown: false }} />
-      <Stack.Screen name="food/[id]" options={{ title: "" }} />
+      <Stack.Screen name="food/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="order/[id]" options={{ title: "Order" }} />
       <Stack.Screen name="review/[orderId]" options={{ title: "Leave a review" }} />
+      <Stack.Screen name="wishlist" options={{ title: "Favorites" }} />
     </Stack>
   );
 }

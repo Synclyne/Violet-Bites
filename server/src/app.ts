@@ -141,6 +141,10 @@ export function createApp(db: DB) {
     res.status(204).end();
   });
 
+  app.get("/discounts", authed, (_req, res) => {
+    res.json(db.prepare("SELECT code, percent_off FROM discount_codes WHERE active = 1").all());
+  });
+
   app.post("/discounts/validate", authed, (req, res) => {
     const parsed = z.object({ code: z.string().min(1) }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
